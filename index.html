@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Camera + Location Test</title>
+</head>
+<body>
+  <h2>Camera & Location Access Test</h2>
+  <p>This page will access your camera and location only after you allow permission.</p>
+
+  <video id="video" width="320" height="240" autoplay></video>
+  <br><br>
+  <button onclick="capture()">Capture Photo + Location</button>
+
+  <canvas id="canvas" width="320" height="240" style="display:none;"></canvas>
+
+  <script>
+    let stream;
+
+    navigator.mediaDevices.getUserMedia({ video: true })
+      .then(s => {
+        stream = s;
+        document.getElementById("video").srcObject = stream;
+      })
+      .catch(() => alert("Camera permission denied"));
+
+    function capture() {
+      navigator.geolocation.getCurrentPosition(
+        position => {
+          takePhoto(position.coords.latitude, position.coords.longitude);
+        },
+        () => {
+          alert("Location permission denied");
+        }
+      );
+    }
+
+    function takePhoto(lat, lon) {
+      const canvas = document.getElementById("canvas");
+      const video = document.getElementById("video");
+      const ctx = canvas.getContext("2d");
+
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const imageData = canvas.toDataURL("image/png");
+
+      fetch("/upload", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          image: imageData,
+          latitude: lat,
+          longitude: lon
+        })
+      }).then(() => {
+        alert("Photo and location sent to server");
+      });
+    }
+  </script>
+</body>
+</html>
+
